@@ -1,0 +1,91 @@
+#!/bin/bash
+
+check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "This script requires root privilege."
+        exit 1
+    fi
+}
+
+local_forward() {
+    local destination=""
+    local source=""
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d=*|--dest=*)
+                destination="${1#*=}"
+                shift
+                ;;
+            -p=*|--dport=*)
+                source_port="${1#*=}"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    check_root
+    
+    sysctl -w net.ipv4.conf.all.route_localnet=1
+
+    iptables -t nat -A OUTPUT -m addrtype --src-type LOCAL --dst-type LOCAL -p tcp --dport $source_port -j DNAT --to-destination $destination
+    iptables -t nat -A POSTROUTING -m addrtype --src-type LOCAL --dst-type UNICAST -j MASQUERADE
+
+    echo "Traffic to 127.0.0.1:$source_port is forwarded to $destination"
+}
+
+whitelist_ip() {
+    local ip=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -a=*|--add=*|--ip=*)
+                ip="${1#*=}"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    check_root
+
+    local gw_if=$(ip addr | grep "state UP" | cut -d ":" -f 2 | head -n 1 | xargs)
+    local gw_addr=$(ip route | grep default | awk '{print $3}')
+
+    iptables -A INPUT -j ACCEPT -s $ip/32 -i $gw_if
+    iptables -A OUTPUT -j ACCEPT -d $ip/32 -o $gw_if
+    ip route add $ip/32 via $gw_addr dev $gw_if
+
+    echo "$ip is routing through $gw_if($gw_addr)"
+
+}
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 [local_forward (lf) | whitelist_ip (wl)]"
+    echo "For local_forward:"
+    echo "   $0 local_forward (lf) --dest/-d=destination_ip:destination_port --dport/-p=source_port"
+    echo "For whitelist_ip:"
+    echo "   $0 whitelist_ip (wl) -a=ip_address_to_whitelist"
+    exit 1
+fi
+
+case "$1" in
+    local_forward|lf)
+        shift
+        local_forward "$@"
+        ;;
+    whitelist_ip|wl)
+        shift
+        whitelist_ip "$@"
+        ;;
+    *)
+        echo "Unknown command: $1"
+        exit 1
+        ;;
+esac
+
