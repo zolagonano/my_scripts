@@ -1,0 +1,17 @@
+#!/bin/bash
+prefix=${PREFIX:-""}
+
+for user in $(cat /etc/passwd | cut -d: -f1 | grep "^$PREFIX")
+do
+  group=$(id -gn $user)
+
+  shell=$(getent passwd $user | cut -d: -f7)
+
+  expiration_raw=$(chage -l $user | grep "Account expires" | cut -d: -f2)
+  expiration_formatted=$(date -d "$expiration_raw" +%Y-%m-%d)
+
+  password_hash="$(getent shadow $user | cut -d: -f2)"
+
+  echo "useradd $user -s $shell -g $group -e $expiration_formatted -p '$password_hash'" 
+done
+
