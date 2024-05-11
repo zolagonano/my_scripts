@@ -1,0 +1,16 @@
+#!/bin/bash
+
+ipdata=$(curl -s http://ip-api.com/json/)
+query=$(echo "$ipdata" | grep -o '"query": *"[^"]*"' | awk -F '"' '{print $4}')
+country=$(echo "$ipdata" | grep -o '"country": *"[^"]*"' | awk -F '"' '{print $4}')
+city=$(echo "$ipdata" | grep -o '"city": *"[^"]*"' | awk -F '"' '{print $4}')
+region=$(echo "$ipdata" | grep -o '"regionName": *"[^"]*"' | awk -F '"' '{print $4}')
+isp=$(echo "$ipdata" | grep -o '"isp": *"[^"]*"' | awk -F '"' '{print $4}')
+as=$(echo "$ipdata" | grep -o '"as": *"[^"]*"' | awk -F '"' '{print $4}')
+
+echo "$(date)"
+echo "IP-> $query"
+echo "Location-> $country, $city, $region"
+echo "ISP-> $isp, $as"
+echo "-----------------------------"
+
