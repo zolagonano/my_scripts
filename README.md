@@ -6,6 +6,7 @@ This repository contains some of the scripts I've created for personal use. Feel
 
 - `fw_ninja`: Firewall Ninja, Used for port forwarding, whitlisting IPs, and etc.
 - `usrs_bckup`: Backups Linux users by creating executable commands(using `useradd`) which can be executed on other servers. 
+- `myip`: Simple script to show current IP address and It's location and provider.
 
 ## Contributing
 
